@@ -38,6 +38,7 @@ jobs:
       - name: Download SDK and NDK
         run: |
           git clone --depth 1 https://code.qt.io/pyside/pyside-setup /tmp/pyside-setup
+          pip install -r /tmp/pyside-setup/tools/cross_compile_android/requirements.txt
           python /tmp/pyside-setup/tools/cross_compile_android/main.py --download-only --skip-update --auto-accept-license
 
       - name: Build APK
