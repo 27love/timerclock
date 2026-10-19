@@ -22,14 +22,15 @@ jobs:
 
       - name: Install toolchain
         run: |
+          python -m venv venv
+          source venv/bin/activate
           python -m pip install --upgrade pip
           pip install PySide6 qtpip
-          pip install -r "$(python -c "import PySide6,os;print(os.path.dirname(PySide6.__file__))")/scripts/requirements-android.txt"
-          sudo apt-get update
-          sudo apt-get install -y zip unzip autoconf automake libtool pkg-config
+          pip install -r "$(python -c 'import PySide6, os; print(os.path.dirname(PySide6.__file__))')/scripts/requirements-android.txt"
 
       - name: Download Android wheels
         run: |
+          source venv/bin/activate
           mkdir wheels && cd wheels
           qtpip download PySide6 --android --arch aarch64
           qtpip download shiboken6 --android --arch aarch64
@@ -44,6 +45,7 @@ jobs:
 
       - name: Build APK
         run: |
+          source venv/bin/activate
           pyside6-android-deploy --name TimerClock --wheel-pyside="$PY_WHL" --wheel-shiboken="$SH_WHL"
 
       - name: Collect APK
