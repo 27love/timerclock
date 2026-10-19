@@ -1,0 +1,59 @@
+name: build-apk
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Install toolchain
+        run: |
+          python -m pip install --upgrade pip
+          pip install PySide6 qtpip
+          sudo apt-get update
+          sudo apt-get install -y zip unzip autoconf automake libtool pkg-config
+
+      - name: Download Android wheels
+        run: |
+          mkdir wheels && cd wheels
+          qtpip download PySide6 --android --arch aarch64
+          qtpip download shiboken6 --android --arch aarch64
+          echo "PY_WHL=$(ls "$PWD"/PySide6-*android_aarch64*.whl | head -1)" >> "$GITHUB_ENV"
+          echo "SH_WHL=$(ls "$PWD"/shiboken6-*android_aarch64*.whl | head -1)" >> "$GITHUB_ENV"
+
+      - name: Download SDK and NDK
+        run: |
+          git clone --depth 1 https://code.qt.io/pyside/pyside-setup /tmp/pyside-setup
+          python /tmp/pyside-setup/tools/cross_compile_android/main.py --download-only --skip-update --auto-accept-license
+
+      - name: Build APK
+        run: |
+          pyside6-android-deploy --name TimerClock --wheel-pyside="$PY_WHL" --wheel-shiboken="$SH_WHL"
+
+      - name: Collect APK
+        if: always()
+        run: |
+          mkdir -p dist
+          find . "$HOME/.buildozer" -name "*.apk" -exec cp {} dist/ \; 2>/dev/null || true
+          ls -la dist
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: TimerClock-apk
+          path: dist/*.apk
+          if-no-files-found: error
